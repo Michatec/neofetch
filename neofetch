@@ -424,6 +424,16 @@ local_ip_interface=('auto')
 de_version="on"
 
 
+# Show Desktop Environment display server (Wayland/X11/Arcan)
+#
+# Default: 'on'
+# Values:  'on', 'off'
+# Flag:    --de_display_server
+# When 'on' neofetch will append the detected display server next to the
+# desktop environment name (for example: "GNOME (Wayland)").
+de_display_server="on"
+
+
 # Disk
 
 
@@ -864,8 +874,6 @@ thumbnail_dir="${XDG_CACHE_HOME:-${HOME}/.cache}/thumbnails/neofetch"
 # Values:   'normal', 'fit', 'fill'
 # Flag:     --crop_mode
 #
-# See this wiki page to learn about the fit and fill options.
-# https://github.com/dylanaraps/neofetch/wiki/What-is-Waifu-Crop%3F
 crop_mode="normal"
 
 # Crop offset
@@ -1878,11 +1886,18 @@ get_de() {
         de+=" $de_ver"
     fi
 
-    # TODO:
-    #  - New config option + flag: --de_display_server on/off ?
-    #  - Add display of X11, Arcan and anything else relevant.
-    [[ $de && $WAYLAND_DISPLAY ]] &&
-        de+=" (Wayland)"
+    # Append display server information (Wayland, X11, Arcan) when enabled.
+    if [[ $de && ${de_display_server:-on} == on ]]; then
+        if [[ -n $WAYLAND_DISPLAY ]]; then
+            de+=" (Wayland)"
+
+        elif [[ -n $ARCAN_CONNPATH || -n $ARCAN_DISPLAY ]] || { type -p pgrep &>/dev/null && pgrep -x arcan >/dev/null 2>&1; }; then
+            de+=" (Arcan)"
+
+        elif [[ -n $DISPLAY ]]; then
+            de+=" (X11)"
+        fi
+    fi
 
     de_run=1
 }
@@ -4894,8 +4909,6 @@ cache_uname() {
     kernel_machine="${uname[2]}"
 
     if [[ "$kernel_name" == "Darwin" ]]; then
-        # macOS can report incorrect versions unless this is 0.
-        # https://github.com/dylanaraps/neofetch/issues/1607
         export SYSTEM_VERSION_COMPAT=0
 
         IFS=$'\n' read -d "" -ra sw_vers <<< "$(awk -F'<|>' '/key|string/ {print $3}' \
@@ -5228,7 +5241,7 @@ DEVELOPER:
     --gen-man                   Generate a manpage for Neofetch in your PWD. (Requires GNU help2man)
 
 
-Report bugs to https://github.com/dylanaraps/neofetch/issues
+Report bugs to https://github.com/michatec/neofetch/issues
 
 "
 exit 1
